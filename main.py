@@ -82,7 +82,7 @@ class CameraGridWidget(QWidget):
             painter.drawLine(x_offset, y_offset + int(j * cell_h), x_offset + int(block_w * cell_w), y_offset + int(j * cell_h))
 
         # Draw block values as characters
-        chars = [' ', '.', ':', '~', '+', 'o', 'O', '0', '8', '@', '█']
+        chars = [' ', '.', ',', ':', ';', '-', '~', '!', '|', '?', '+', '%', '$', '@', '&', '█']
         font = QFont("Consolas", int(min(cell_w, cell_h)))
         painter.setFont(font)
         painter.setPen(QColor(0, 0, 0))
