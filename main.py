@@ -1,9 +1,11 @@
 from PySide6.QtWidgets import (
-    QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSlider, QPushButton
+    QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSlider, QPushButton, QStackedLayout, QLineEdit, QLabel, QFileDialog
 )
 from PySide6.QtGui import QImage, QPainter, QPixmap, QPen, QColor, QFont
 from PySide6.QtCore import QTimer, Qt
 from camera import Camera
+import os
+import datetime
 
 class CameraGridWidget(QWidget):
     def __init__(self, parent=None):
@@ -22,21 +24,6 @@ class CameraGridWidget(QWidget):
     def set_hide_camera(self, hide):
         self.hide_camera = hide
         self.update()
-
-    def get_grid_text(self):
-        if self.block_values is None:
-            return ""
-        chars = [' ', '.', ':', '~', '+', 'o', 'O', '0', '8', '@', '█']
-        block_h, block_w = self.block_values.shape
-        lines = []
-        for by in range(block_h):
-            line = ""
-            for bx in range(block_w):
-                value = int(self.block_values[by, bx])
-                idx = int(value / 255 * (len(chars) - 1))
-                line += chars[idx]
-            lines.append(line)
-        return "\n".join(lines)
 
     def paintEvent(self, event):
         if self.frame is None or self.block_values is None:
@@ -82,7 +69,7 @@ class CameraGridWidget(QWidget):
             painter.drawLine(x_offset, y_offset + int(j * cell_h), x_offset + int(block_w * cell_w), y_offset + int(j * cell_h))
 
         # Draw block values as characters
-        chars = [' ', '.', ',', ':', ';', '-', '~', '!', '|', '?', '+', '%', '$', '@', '&', '█']
+        chars = ['█', '@', '8', '#', 'o', '+', '~', ':', '.', ' ']
         font = QFont("Consolas", int(min(cell_w, cell_h)))
         painter.setFont(font)
         painter.setPen(QColor(0, 0, 0))
@@ -100,11 +87,48 @@ class CameraGridWidget(QWidget):
                 )
         painter.end()
 
+class StartupOverlay(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.selected_dir = ""
+        layout = QVBoxLayout(self)
+        layout.addStretch()
+        label = QLabel("Select a directory to save images:")
+        layout.addWidget(label, alignment=Qt.AlignCenter)
+
+        # Directory selector
+        dir_layout = QHBoxLayout()
+        self.dir_edit = QLineEdit()
+        self.dir_edit.setReadOnly(True)
+        dir_btn = QPushButton("Browse...")
+        dir_layout.addWidget(self.dir_edit)
+        dir_layout.addWidget(dir_btn)
+        layout.addLayout(dir_layout)
+
+        # Next button
+        self.next_btn = QPushButton("Next")
+        self.next_btn.setEnabled(False)
+        layout.addWidget(self.next_btn, alignment=Qt.AlignCenter)
+        layout.addStretch()
+
+        dir_btn.clicked.connect(self.pick_dir)
+        self.dir_edit.textChanged.connect(self.check_valid)
+    
+    def pick_dir(self):
+        dir_path = QFileDialog.getExistingDirectory(self, "Select Directory")
+        if dir_path:
+            self.dir_edit.setText(dir_path)
+            self.selected_dir = dir_path
+
+    def check_valid(self):
+        self.next_btn.setEnabled(bool(self.dir_edit.text()))
+
 def main():
     app = QApplication([])
     window = QWidget()
     window.setWindowTitle("Camera Feed with Pixelation Grid")
 
+    # --- Main UI setup ---
     cam = Camera(src=0, width=128, height=56)
     camera_widget = CameraGridWidget()
     camera_widget.setMinimumSize(320, 240)
@@ -117,22 +141,45 @@ def main():
 
     toggle_btn = QPushButton("Hide Camera Feed")
     toggle_btn.setCheckable(True)
-
-    copy_btn = QPushButton("Copy Grid")
+    freeze_btn = QPushButton("Freeze")
+    save_btn = QPushButton("Save Image")
 
     bottom_layout = QHBoxLayout()
     bottom_layout.addWidget(slider)
     bottom_layout.addWidget(toggle_btn)
-    bottom_layout.addWidget(copy_btn)
+    bottom_layout.addWidget(freeze_btn)
+    bottom_layout.addWidget(save_btn)
 
-    layout = QVBoxLayout(window)
-    layout.addWidget(camera_widget)
-    layout.addLayout(bottom_layout)
-    window.setLayout(layout)
+    main_layout = QVBoxLayout()
+    main_layout.addWidget(camera_widget)
+    main_layout.addLayout(bottom_layout)
+
+    main_ui = QWidget()
+    main_ui.setLayout(main_layout)
+
+    # --- Startup overlay ---
+    overlay = StartupOverlay()
+
+    # --- Stacked layout ---
+    stacked = QStackedLayout()
+    stacked.addWidget(overlay)   # index 0: overlay
+    stacked.addWidget(main_ui)   # index 1: main UI
+
+    window.setLayout(stacked)
+    window.resize(800, 600)
     window.show()
 
+    # --- Only show main UI after valid dir is picked ---
+    save_dir = {"path": ""}
+
+    def on_next():
+        save_dir["path"] = overlay.selected_dir
+        stacked.setCurrentIndex(1)
+    overlay.next_btn.clicked.connect(on_next)
+
+    frozen = {"active": False, "frame": None, "block_values": None, "ksize": None}
+
     def on_slider_change(value):
-        # No need to do anything here; update_frame will use the slider value
         pass
     slider.valueChanged.connect(on_slider_change)
 
@@ -145,15 +192,40 @@ def main():
             toggle_btn.setText("Hide Camera Feed")
     toggle_btn.clicked.connect(on_toggle)
 
-    def on_copy():
-        grid_text = camera_widget.get_grid_text()
-        QApplication.clipboard().setText(grid_text)
-    copy_btn.clicked.connect(on_copy)
+    def on_freeze():
+        frozen["active"] = not frozen["active"]
+        if frozen["active"]:
+            freeze_btn.setText("Unfreeze")
+            frozen["frame"] = camera_widget.frame
+            frozen["block_values"] = camera_widget.block_values
+            frozen["ksize"] = camera_widget.pixelate_ksize
+        else:
+            freeze_btn.setText("Freeze")
+    freeze_btn.clicked.connect(on_freeze)
+
+    def on_save():
+        if camera_widget.frame is not None and save_dir["path"]:
+            img = QImage(
+                camera_widget.frame.data,
+                camera_widget.frame.shape[1],
+                camera_widget.frame.shape[0],
+                camera_widget.frame.shape[1],
+                QImage.Format_Grayscale8
+            )
+            now = datetime.datetime.now()
+            timestamp = now.strftime("%d %B %Y %I-%M-%S %p")
+            filename = f"Capture {timestamp}.png"
+            filepath = os.path.join(save_dir["path"], filename)
+            img.save(filepath)
+    save_btn.clicked.connect(on_save)
 
     def update_frame():
-        frame, block_values = cam.read(pixelate_ksize=slider.value())
-        if frame is not None:
-            camera_widget.set_frame(frame, block_values, slider.value())
+        if frozen["active"] and frozen["frame"] is not None and frozen["block_values"] is not None:
+            camera_widget.set_frame(frozen["frame"], frozen["block_values"], frozen["ksize"])
+        else:
+            frame, block_values = cam.read(pixelate_ksize=slider.value())
+            if frame is not None:
+                camera_widget.set_frame(frame, block_values, slider.value())
 
     timer = QTimer()
     timer.timeout.connect(update_frame)
