@@ -1,11 +1,9 @@
 from PySide6.QtWidgets import (
-    QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSlider, QPushButton, QStackedLayout
+    QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSlider, QPushButton
 )
 from PySide6.QtGui import QImage, QPainter, QPixmap, QPen, QColor, QFont
 from PySide6.QtCore import QTimer, Qt
 from camera import Camera
-import sys
-import numpy as np
 
 class CameraGridWidget(QWidget):
     def __init__(self, parent=None):
@@ -13,7 +11,7 @@ class CameraGridWidget(QWidget):
         self.frame = None
         self.block_values = None
         self.pixelate_ksize = 7
-        self.hide_camera = False  # New attribute
+        self.hide_camera = False
 
     def set_frame(self, frame, block_values, pixelate_ksize):
         self.frame = frame
@@ -24,6 +22,21 @@ class CameraGridWidget(QWidget):
     def set_hide_camera(self, hide):
         self.hide_camera = hide
         self.update()
+
+    def get_grid_text(self):
+        if self.block_values is None:
+            return ""
+        chars = [' ', '.', ':', '~', '+', 'o', 'O', '0', '8', '@', '█']
+        block_h, block_w = self.block_values.shape
+        lines = []
+        for by in range(block_h):
+            line = ""
+            for bx in range(block_w):
+                value = int(self.block_values[by, bx])
+                idx = int(value / 255 * (len(chars) - 1))
+                line += chars[idx]
+            lines.append(line)
+        return "\n".join(lines)
 
     def paintEvent(self, event):
         if self.frame is None or self.block_values is None:
@@ -69,7 +82,7 @@ class CameraGridWidget(QWidget):
             painter.drawLine(x_offset, y_offset + int(j * cell_h), x_offset + int(block_w * cell_w), y_offset + int(j * cell_h))
 
         # Draw block values as characters
-        chars = ['█ ', '@', '#', '&', '%','W', 'V', 'r', 'i', '^', '/', ';', '-', '.', ' ']
+        chars = [' ', '.', ':', '~', '+', 'o', 'O', '0', '8', '@', '█']
         font = QFont("Consolas", int(min(cell_w, cell_h)))
         painter.setFont(font)
         painter.setPen(QColor(0, 0, 0))
@@ -87,21 +100,6 @@ class CameraGridWidget(QWidget):
                 )
         painter.end()
 
-    def sizeHint(self):
-        if self.frame is not None:
-            h, w = self.frame.shape
-            return self.frame.shape[::-1]
-        return super().sizeHint()
-
-class WhiteOverlay(QWidget):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-
-    def paintEvent(self, event):
-        painter = QPainter(self)
-        painter.fillRect(self.rect(), QColor(255, 255, 255, 128))  # Semi-transparent white
-        painter.end()
-
 def main():
     app = QApplication([])
     window = QWidget()
@@ -110,13 +108,6 @@ def main():
     cam = Camera(src=0, width=128, height=56)
     camera_widget = CameraGridWidget()
     camera_widget.setMinimumSize(320, 240)
-    white_overlay = WhiteOverlay()
-    white_overlay.setMinimumSize(320, 240)
-
-    # Stacked layout for camera/grid and white overlay
-    stacked = QStackedLayout()
-    stacked.addWidget(camera_widget)   # index 0: camera view
-    stacked.addWidget(white_overlay)   # index 1: white overlay
 
     slider = QSlider(Qt.Horizontal)
     slider.setMinimum(2)
@@ -127,15 +118,23 @@ def main():
     toggle_btn = QPushButton("Hide Camera Feed")
     toggle_btn.setCheckable(True)
 
+    copy_btn = QPushButton("Copy Grid")
+
     bottom_layout = QHBoxLayout()
     bottom_layout.addWidget(slider)
     bottom_layout.addWidget(toggle_btn)
+    bottom_layout.addWidget(copy_btn)
 
     layout = QVBoxLayout(window)
-    layout.addLayout(stacked)
+    layout.addWidget(camera_widget)
     layout.addLayout(bottom_layout)
     window.setLayout(layout)
     window.show()
+
+    def on_slider_change(value):
+        # No need to do anything here; update_frame will use the slider value
+        pass
+    slider.valueChanged.connect(on_slider_change)
 
     def on_toggle():
         hide = toggle_btn.isChecked()
@@ -145,6 +144,11 @@ def main():
         else:
             toggle_btn.setText("Hide Camera Feed")
     toggle_btn.clicked.connect(on_toggle)
+
+    def on_copy():
+        grid_text = camera_widget.get_grid_text()
+        QApplication.clipboard().setText(grid_text)
+    copy_btn.clicked.connect(on_copy)
 
     def update_frame():
         frame, block_values = cam.read(pixelate_ksize=slider.value())
