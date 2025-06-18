@@ -15,7 +15,7 @@ class Camera:
         if not ret:
             return None
         # Convert BGR to RGB for display
-        return cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        return cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
     def release(self):
         self.cap.release()

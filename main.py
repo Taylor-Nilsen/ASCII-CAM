@@ -25,11 +25,13 @@ def main():
 
     def update_frame():
         frame = cam.read()
+        print(frame.shape)
         if frame is None:
             return
-        h, w, ch = frame.shape
+        h, w, = frame.shape
+        ch = 1
         # Wrap numpy frame in a QImage
-        qimg = QImage(frame.data, w, h, ch * w, QImage.Format_RGB888)
+        qimg = QImage(frame.data, w, h, ch * w, QImage.Format_Grayscale8)
         # Scale pixmap to label size, keeping aspect ratio
         pix = QPixmap.fromImage(qimg).scaled(
             label.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation
