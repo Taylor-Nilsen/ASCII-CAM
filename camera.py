@@ -5,9 +5,8 @@ class Camera:
         self.cap = cv2.VideoCapture(src)
         if not self.cap.isOpened():
             raise RuntimeError("Cannot open camera")
-        # Force resolution to 640x480
-        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
+        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
 
     def read(self, pixelate_ksize=None):
         ret, frame = self.cap.read()
