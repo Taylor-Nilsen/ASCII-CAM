@@ -5,14 +5,16 @@ class Camera:
         self.cap = cv2.VideoCapture(src)
         if not self.cap.isOpened():
             raise RuntimeError("Cannot open camera")
-        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
-        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
+        # Force resolution to 640x480
+        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 
     def read(self, pixelate_ksize=None):
         ret, frame = self.cap.read()
         if not ret:
             return None, None
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        gray = cv2.flip(gray, 1)  # Mirror horizontally
         block_values = None
         if pixelate_ksize is not None:
             h, w = gray.shape

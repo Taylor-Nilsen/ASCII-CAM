@@ -69,14 +69,6 @@ class CameraGridWidget(QWidget):
         cell_w = pixmap_w / block_w
         cell_h = pixmap_h / block_h
 
-        # Draw grid
-        pen = QPen(QColor(158, 158, 158), 1)
-        painter.setPen(pen)
-        for i in range(1, block_w):
-            painter.drawLine(x_offset + int(i * cell_w), y_offset, x_offset + int(i * cell_w), y_offset + int(block_h * cell_h))
-        for j in range(1, block_h):
-            painter.drawLine(x_offset, y_offset + int(j * cell_h), x_offset + int(block_w * cell_w), y_offset + int(j * cell_h))
-
         # Draw block values as characters
         font = QFont("Consolas", int(min(cell_w, cell_h)))
         painter.setFont(font)
@@ -226,48 +218,14 @@ def main():
     freeze_btn.clicked.connect(on_freeze)
 
     def on_save():
-        if camera_widget.block_values is not None and save_dir["path"]:
-            block_h, block_w = camera_widget.block_values.shape
-    
-            # Render at natural size
-            font_size = 20
-            font = QFont("Consolas", font_size)
-            metrics = QFontMetrics(font)
-            char_width = metrics.horizontalAdvance('█')
-            char_height = metrics.height()
-            nat_width = char_width * block_w
-            nat_height = char_height * block_h
-    
-            lines = []
-            for by in range(block_h):
-                line = ""
-                for bx in range(block_w):
-                    value = int(camera_widget.block_values[by, bx])
-                    idx = int(value / 255 * (len(chars) - 1))
-                    line += chars[idx]
-                lines.append(line)
-    
-            image = QImage(nat_width, nat_height, QImage.Format_RGB32)
-            image.fill(Qt.white)
-            painter = QPainter(image)
-            painter.setFont(font)
-            painter.setPen(Qt.black)
-            for row, line in enumerate(lines):
-                y = (row + 1) * char_height - metrics.descent()
-                painter.drawText(0, y, line)
-            painter.end()
-    
-            # --- SCALE the image to 4:3 ---
-            out_width = 1200
-            out_height = 900  # 4:3 aspect ratio
-            scaled_image = image.scaled(out_width, out_height, Qt.IgnoreAspectRatio, Qt.SmoothTransformation)
-    
-            # Save the SCALED image
+        if save_dir["path"]:
+            # Grab a snapshot of the camera widget
+            pixmap = camera_widget.grab()
             now = datetime.datetime.now()
             timestamp = now.strftime("%d %B %Y %I-%M-%S %p")
             filename = f"Capture {timestamp}.png"
             filepath = os.path.join(save_dir["path"], filename)
-            scaled_image.save(filepath)
+            pixmap.save(filepath)
     save_btn.clicked.connect(on_save)
 
     def update_frame():
