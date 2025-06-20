@@ -17,7 +17,7 @@ char_ramps = {
 }
 
 # select chars
-chars = char_ramps["11"]
+chars = char_ramps["9"]
 
 class CameraGridWidget(QWidget):
     def __init__(self, parent=None):
