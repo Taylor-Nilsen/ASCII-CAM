@@ -1,4 +1,4 @@
-# ASCII CAM 📹✨
+# ASCII CAM 
 
 A real-time ASCII art generator that converts webcam feed into beautiful text-based art using Python and PySide6.
 
@@ -86,10 +86,6 @@ The application includes multiple ASCII character ramps:
 | PySide6 | 6.7.2 | GUI framework and Qt bindings |
 | opencv-contrib-python | 4.11.0.86 | Computer vision and camera handling |
 
-## 🤝 Contributing
-
-Feel free to fork this project and submit pull requests for any improvements!
-
 ## 📝 License
 
 This project is open source and available under the [MIT License](LICENSE).
@@ -104,6 +100,3 @@ This project is open source and available under the [MIT License](LICENSE).
 - Lower the resolution using the slider
 - Close other applications that might be using system resources
 
----
-
-*Made with ❤️ and lots of ASCII characters*
