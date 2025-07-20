@@ -5,6 +5,7 @@ A real-time ASCII art generator that converts webcam feed into beautiful text-ba
 ![Python](https://img.shields.io/badge/Python-3.12.4-blue.svg)
 ![PySide6](https://img.shields.io/badge/PySide6-6.7.2-green.svg)
 ![OpenCV](https://img.shields.io/badge/OpenCV-4.11.0.86-red.svg)
+![PyInstaller](https://img.shields.io/badge/PyInstaller-6.14.2-orange.svg)
 
 ## Features
 
@@ -94,13 +95,6 @@ The application includes multiple ASCII character ramps for different visual eff
 - **9 characters**: `█▓▒░+=-.` (Balanced detail level)
 - **11 characters**: `█@%#*+=-:. ` (Default - high contrast with symbols)
 - **16 characters**: `$@B%8&WM#*oahkb ` (Maximum detail and variation)
-
-## Dependencies
-
-| Package | Version | Purpose |
-|---------|---------|---------|
-| PySide6 | 6.7.2 | GUI framework with Qt bindings and threading support |
-| opencv-contrib-python | 4.11.0.86 | Computer vision, camera handling, and image processing |
 
 ## License
 
