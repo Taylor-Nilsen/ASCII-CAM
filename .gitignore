@@ -6,3 +6,8 @@ __pycache__
 .Python
 db.sqlite3
 .env
+
+# PyInstaller generated files
+dist/
+build/
+*.spec
